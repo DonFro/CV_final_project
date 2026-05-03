@@ -23,3 +23,6 @@ Thumbs.db
 
 # VS Code
 .vscode/
+
+# Webcam Video
+*.mp4
