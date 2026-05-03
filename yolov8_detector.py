@@ -1,26 +1,29 @@
 from ultralytics import YOLO
-import cv2
+from utils.metrics import compute_metrics
 
-model = YOLO("yolov8n.pt")  # downloads automatically on first run
+model = YOLO("yolov8n.pt")
 
-def run_yolov8(frame):
+def run_yolov8(frame, gt_boxes=None):
     results = model(frame, verbose=False)
     annotated_frame = results[0].plot()
 
-    # Extract basic precision/recall from results if available
-    precision = 0
-    recall = 0
-    f1 = 0
-    mAP = 0
-
+    pred_boxes, pred_scores = [], []
     if results[0].boxes is not None:
-        probs = results[0].boxes.conf.cpu().numpy()
-        precision = float(probs.mean()) if len(probs) > 0 else 0
+        for box in results[0].boxes:
+            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+            pred_boxes.append([x1, y1, x2, y2])
+            pred_scores.append(float(box.conf[0].cpu().numpy()))
+
+    gt = gt_boxes if gt_boxes else []
+    precision, recall, f1, mAP = compute_metrics(pred_boxes, pred_scores, gt)
+    avg_confidence = round(float(sum(pred_scores) / len(pred_scores)), 4) if pred_scores else 0.0
 
     return {
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-        "mAP": round(mAP, 4),
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "mAP": mAP,
+        "avg_confidence": avg_confidence,
+        "num_detections": len(pred_boxes),
         "annotated_frame": annotated_frame,
     }

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from utils.metrics import compute_metrics
 
 PROTOTXT = "MobileNetSSD_deploy.prototxt"
 CAFFEMODEL = "MobileNetSSD_deploy.caffemodel"
@@ -12,32 +13,36 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
 
 net = cv2.dnn.readNetFromCaffe(PROTOTXT, CAFFEMODEL)
 
-def run_mobilenet_ssd(frame):
+def run_mobilenet_ssd(frame, gt_boxes=None):
     (h, w) = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)),
                                   0.007843, (300, 300), 127.5)
     net.setInput(blob)
     detections = net.forward()
 
-    confidences = []
+    pred_boxes, pred_scores = [], []
     for i in range(detections.shape[2]):
         confidence = detections[0, 0, i, 2]
         if confidence > CONFIDENCE_THRESHOLD:
-            confidences.append(float(confidence))
-            idx = int(detections[0, 0, i, 1])
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (x1, y1, x2, y2) = box.astype("int")
-            label = f"{CLASSES[idx]}: {confidence:.2f}"
+            pred_boxes.append([x1, y1, x2, y2])
+            pred_scores.append(float(confidence))
+            label = f"{CLASSES[int(detections[0,0,i,1])]}: {confidence:.2f}"
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(frame, label, (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    precision = float(np.mean(confidences)) if confidences else 0
+    gt = gt_boxes if gt_boxes else []
+    precision, recall, f1, mAP = compute_metrics(pred_boxes, pred_scores, gt)
+    avg_confidence = round(float(sum(pred_scores) / len(pred_scores)), 4) if pred_scores else 0.0
 
     return {
-        "precision": round(precision, 4),
-        "recall": 0,
-        "f1": 0,
-        "mAP": 0,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "mAP": mAP,
+        "avg_confidence": avg_confidence,
+        "num_detections": len(pred_boxes),
         "annotated_frame": frame,
     }
