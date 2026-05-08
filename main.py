@@ -20,7 +20,7 @@ FRAME_COUNTS = {
 }
 
 LOG_FILE = "results.csv"
-VIDEO_SOURCE = "test_video.mp4"
+VIDEO_SOURCE = "webcam_test.mp4"
 
 def log_result(model_name, frame_id, fps, latency_ms, precision, recall, f1, mAP, avg_confidence, num_detections):
     with open(LOG_FILE, "a", newline="") as f:
