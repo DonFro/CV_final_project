@@ -5,9 +5,11 @@ import numpy as np
 import os
 from utils.metrics import compute_metrics
 
+# EfficientDet Model downloads from TF Hub on first run and caches locally
 MODEL_URL = "https://tfhub.dev/tensorflow/efficientdet/d1/1"
 CONFIDENCE_THRESHOLD = 0.3
 
+# Show download progress in terminal during first run
 os.environ["TFHUB_DOWNLOAD_PROGRESS"] = "1"
 
 print("Loading EfficientDet model...")
@@ -15,8 +17,13 @@ model = hub.load(MODEL_URL)
 print("EfficientDet loaded.")
 
 def run_efficientdet(frame, gt_boxes=None):
+    # Convert BGR (OpenCV format) to RGB (TensorFlow format)
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Add batch dimension: shape becomes [1, H, W, 3]
     input_tensor = tf.convert_to_tensor(rgb, dtype=tf.uint8)[tf.newaxis, ...]
+
+    # Run inference
     detections = model(input_tensor)
 
     boxes = detections["detection_boxes"][0].numpy()

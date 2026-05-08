@@ -1,12 +1,15 @@
 from ultralytics import YOLO
 from utils.metrics import compute_metrics
 
+# Load YOLOv8 nano model — downloads automatically on first run
 model = YOLO("yolov8n.pt")
 
 def run_yolov8(frame, gt_boxes=None):
+    # Run inference on the frame; verbose=False suppresses per-frame console output
     results = model(frame, verbose=False)
     annotated_frame = results[0].plot()
 
+    # Extract predicted bounding boxes and confidence scores
     pred_boxes, pred_scores = [], []
     if results[0].boxes is not None:
         for box in results[0].boxes:
@@ -14,6 +17,7 @@ def run_yolov8(frame, gt_boxes=None):
             pred_boxes.append([x1, y1, x2, y2])
             pred_scores.append(float(box.conf[0].cpu().numpy()))
 
+    # Use provided GT boxes for full metric computation, or empty list for webcam mode
     gt = gt_boxes if gt_boxes else []
     precision, recall, f1, mAP = compute_metrics(pred_boxes, pred_scores, gt)
     avg_confidence = round(float(sum(pred_scores) / len(pred_scores)), 4) if pred_scores else 0.0

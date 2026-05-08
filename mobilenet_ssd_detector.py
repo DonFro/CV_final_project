@@ -2,27 +2,36 @@ import cv2
 import numpy as np
 from utils.metrics import compute_metrics
 
+# Paths to the Caffe model files — must be correctly paired versions
+# OpenCV reads the prototxt first to build the network structure in memory, then loads the caffemodel to fill every layer with its trained weights. After that the network is ready to run inference.
 PROTOTXT = "MobileNetSSD_deploy.prototxt"
 CAFFEMODEL = "MobileNetSSD_deploy.caffemodel"
 CONFIDENCE_THRESHOLD = 0.2
 
+# MobileNet-SSD was trained on Pascal VOC — 20 object classes
 CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
            "dog", "horse", "motorbike", "person", "pottedplant",
            "sheep", "sofa", "train", "tvmonitor"]
 
+# Load the network from Caffe model files once at import time
 net = cv2.dnn.readNetFromCaffe(PROTOTXT, CAFFEMODEL)
 
 def run_mobilenet_ssd(frame, gt_boxes=None):
     (h, w) = frame.shape[:2]
+    # Preprocess: resize to 300x300, normalize pixel values to [-1, 1]
     blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)),
                                   0.007843, (300, 300), 127.5)
     net.setInput(blob)
+
+    # Run forward pass to get detections
     detections = net.forward()
 
     pred_boxes, pred_scores = [], []
     for i in range(detections.shape[2]):
         confidence = detections[0, 0, i, 2]
+
+        # Filter out weak detections below the confidence threshold
         if confidence > CONFIDENCE_THRESHOLD:
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (x1, y1, x2, y2) = box.astype("int")

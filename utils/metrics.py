@@ -1,14 +1,21 @@
 import numpy as np
 
+# Compute Intersection over Union (IoU) between two bounding boxes
 def compute_iou(box1, box2):
+    # Find the coordinates of the intersection rectangle
     xi1 = max(box1[0], box2[0])
     yi1 = max(box1[1], box2[1])
     xi2 = min(box1[2], box2[2])
     yi2 = min(box1[3], box2[3])
+
+    # Intersection area (0 if boxes don't overlap)
     inter = max(0, xi2 - xi1) * max(0, yi2 - yi1)
+
+    # Union area = sum of both box areas minus intersection
     area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
     area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
     union = area1 + area2 - inter
+
     return inter / union if union > 0 else 0
 
 def compute_metrics(pred_boxes, pred_scores, gt_boxes, iou_threshold=0.5):
